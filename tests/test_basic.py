@@ -1275,7 +1275,7 @@ def test_make_response(app, req_ctx):
     assert rv.data == b"W00t"
     assert rv.mimetype == "text/html"
 
-    rv = flask.make_response(c for c in "Hello")
+    rv = flask.make_response(iter("Hello"))
     assert rv.status_code == 200
     assert rv.data == b"Hello"
     assert rv.mimetype == "text/html"
@@ -1631,7 +1631,7 @@ def test_inject_blueprint_url_defaults(app):
 
     app.register_blueprint(bp)
 
-    values = dict()
+    values = {}
     app.inject_url_defaults("foo.view", values)
     expected = dict(page="login")
     assert values == expected

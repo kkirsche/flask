@@ -298,10 +298,7 @@ class TaggedJSONSerializer:
 
         key = next(iter(value))
 
-        if key not in self.tags:
-            return value
-
-        return self.tags[key].to_python(value[key])
+        return value if key not in self.tags else self.tags[key].to_python(value[key])
 
     def dumps(self, value: t.Any) -> str:
         """Tag the value and dump it to a compact JSON string."""
