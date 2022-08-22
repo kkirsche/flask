@@ -208,10 +208,7 @@ def loads(s: str | bytes, *, app: Flask | None = None, **kwargs: t.Any) -> t.Any
     else:
         app = current_app
 
-    if app:
-        return app.json.loads(s, **kwargs)
-
-    return _json.loads(s, **kwargs)
+    return app.json.loads(s, **kwargs) if app else _json.loads(s, **kwargs)
 
 
 def load(fp: t.IO[t.AnyStr], *, app: Flask | None = None, **kwargs: t.Any) -> t.Any:
@@ -247,10 +244,7 @@ def load(fp: t.IO[t.AnyStr], *, app: Flask | None = None, **kwargs: t.Any) -> t.
     else:
         app = current_app
 
-    if app:
-        return app.json.load(fp, **kwargs)
-
-    return _json.load(fp, **kwargs)
+    return app.json.load(fp, **kwargs) if app else _json.load(fp, **kwargs)
 
 
 def htmlsafe_dumps(obj: t.Any, **kwargs: t.Any) -> str:

@@ -730,7 +730,7 @@ class Flask(Scaffold):
             )
 
     @locked_cached_property
-    def name(self) -> str:  # type: ignore
+    def name(self) -> str:    # type: ignore
         """The name of the application.  This is usually the import name
         with the difference that it's guessed from the run file if the
         import name is main.  This name is used as a display name when
@@ -741,9 +741,7 @@ class Flask(Scaffold):
         """
         if self.import_name == "__main__":
             fn = getattr(sys.modules["__main__"], "__file__", None)
-            if fn is None:
-                return "__main__"
-            return os.path.splitext(os.path.basename(fn))[0]
+            return "__main__" if fn is None else os.path.splitext(os.path.basename(fn))[0]
         return self.import_name
 
     @property
@@ -764,9 +762,7 @@ class Flask(Scaffold):
             stacklevel=2,
         )
         rv = self.config["PROPAGATE_EXCEPTIONS"]
-        if rv is not None:
-            return rv
-        return self.testing or self.debug
+        return rv if rv is not None else self.testing or self.debug
 
     @locked_cached_property
     def logger(self) -> logging.Logger:
@@ -823,9 +819,7 @@ class Flask(Scaffold):
 
         .. versionadded:: 0.8
         """
-        root_path = self.root_path
-        if instance_relative:
-            root_path = self.instance_path
+        root_path = self.instance_path if instance_relative else self.root_path
         defaults = dict(self.default_config)
         defaults["ENV"] = os.environ.get("FLASK_ENV") or "production"
         defaults["DEBUG"] = get_debug_flag()
@@ -991,7 +985,7 @@ class Flask(Scaffold):
         for name in names:
             if name in self.template_context_processors:
                 for func in self.template_context_processors[name]:
-                    context.update(func())
+                    context |= func()
 
         context.update(orig_ctx)
 
@@ -1004,7 +998,7 @@ class Flask(Scaffold):
         """
         rv = {"app": self, "g": g}
         for processor in self.shell_context_processors:
-            rv.update(processor())
+            rv |= processor()
         return rv
 
     @property
@@ -1164,11 +1158,7 @@ class Flask(Scaffold):
             sn_host, _, sn_port = server_name.partition(":")
 
         if not host:
-            if sn_host:
-                host = sn_host
-            else:
-                host = "127.0.0.1"
-
+            host = sn_host or "127.0.0.1"
         if port or port == 0:
             port = int(port)
         elif sn_port:
@@ -1601,9 +1591,7 @@ class Flask(Scaffold):
             return e
 
         handler = self._find_error_handler(e)
-        if handler is None:
-            return e
-        return self.ensure_sync(handler)(e)
+        return e if handler is None else self.ensure_sync(handler)(e)
 
     def trap_http_exception(self, e: Exception) -> bool:
         """Checks if an HTTP exception should be trapped or not.  By default
@@ -1635,10 +1623,7 @@ class Flask(Scaffold):
         ):
             return True
 
-        if trap_bad_request:
-            return isinstance(e, BadRequest)
-
-        return False
+        return isinstance(e, BadRequest) if trap_bad_request else False
 
     def handle_user_exception(
         self, e: Exception
@@ -1883,10 +1868,7 @@ class Flask(Scaffold):
 
         .. versionadded:: 2.0
         """
-        if iscoroutinefunction(func):
-            return self.async_to_sync(func)
-
-        return func
+        return self.async_to_sync(func) if iscoroutinefunction(func) else func
 
     def async_to_sync(
         self, func: t.Callable[..., t.Coroutine]
@@ -1973,9 +1955,7 @@ class Flask(Scaffold):
             url_adapter = req_ctx.url_adapter
             blueprint_name = req_ctx.request.blueprint
 
-            # If the endpoint starts with "." and the request matches a
-            # blueprint, the endpoint is relative to the blueprint.
-            if endpoint[:1] == ".":
+            if endpoint.startswith("."):
                 if blueprint_name is not None:
                     endpoint = f"{blueprint_name}{endpoint}"
                 else:
@@ -2113,15 +2093,13 @@ class Flask(Scaffold):
             len_rv = len(rv)
 
             # a 3-tuple is unpacked directly
-            if len_rv == 3:
-                rv, status, headers = rv  # type: ignore[misc]
-            # decide if a 2-tuple has status or headers
-            elif len_rv == 2:
+            if len_rv == 2:
                 if isinstance(rv[1], (Headers, dict, tuple, list)):
                     rv, headers = rv
                 else:
                     rv, status = rv  # type: ignore[assignment,misc]
-            # other sized tuples are not allowed
+            elif len_rv == 3:
+                rv, status, headers = rv  # type: ignore[misc]
             else:
                 raise TypeError(
                     "The view function did not return a valid response tuple."
@@ -2139,7 +2117,7 @@ class Flask(Scaffold):
 
         # make sure the body is an instance of the response class
         if not isinstance(rv, self.response_class):
-            if isinstance(rv, (str, bytes, bytearray)) or isinstance(rv, _abc_Iterator):
+            if isinstance(rv, (str, bytes, bytearray, _abc_Iterator)):
                 # let the response class set the status and headers instead of
                 # waiting to do it manually, so that the class can handle any
                 # special logic
@@ -2210,10 +2188,11 @@ class Flask(Scaffold):
             # If subdomain matching is disabled (the default), use the
             # default subdomain in all cases. This should be the default
             # in Werkzeug but it currently does not have that feature.
-            if not self.subdomain_matching:
-                subdomain = self.url_map.default_subdomain or None
-            else:
-                subdomain = None
+            subdomain = (
+                None
+                if self.subdomain_matching
+                else self.url_map.default_subdomain or None
+            )
 
             return self.url_map.bind_to_environ(
                 request.environ,
